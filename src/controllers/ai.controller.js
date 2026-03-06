@@ -1,7 +1,7 @@
 const {
   generateMentorResponse,
   saveMentorConversation,
-  mapOpenAiError,
+  mapAiError,
 } = require("../services/ai.service");
 
 function isFallbackEnabled() {
@@ -22,7 +22,7 @@ function buildFallbackMentorResponse(message) {
   return {
     correction: message,
     explanation:
-      "This is a fallback mentor response because AI quota/rate limit was reached. Please top up OpenAI billing for real corrections.",
+      "This is a fallback mentor response because AI quota/rate limit was reached.",
     nextQuestion: "Can you rewrite your sentence in past tense and send again?",
   };
 }
@@ -39,7 +39,7 @@ async function chatWithMentor(req, res) {
 
     return res.success("AI mentor response generated.", mentorResult);
   } catch (error) {
-    const mapped = mapOpenAiError(error);
+    const mapped = mapAiError(error);
 
     if (mapped.statusCode === 429 && isFallbackEnabled()) {
       const message = String(req.body.message || "").trim();
