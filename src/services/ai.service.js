@@ -11,6 +11,7 @@ const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
 const OLLAMA_CHAT_URL = `${OLLAMA_BASE_URL}/api/chat`;
 const OLLAMA_TAGS_URL = `${OLLAMA_BASE_URL}/api/tags`;
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3.1:8b";
+const OLLAMA_TIMEOUT_MS = Number(process.env.OLLAMA_TIMEOUT_MS || 180000);
 const OLLAMA_AUTO_FALLBACK =
   String(process.env.OLLAMA_AUTO_FALLBACK || "true").toLowerCase() !== "false";
 
@@ -98,7 +99,7 @@ async function sendOllamaChat(model, messages, responseFormat, temperature) {
     headers: {
       "Content-Type": "application/json",
     },
-    timeout: 60000,
+    timeout: OLLAMA_TIMEOUT_MS,
   });
 }
 

@@ -1,11 +1,17 @@
-const { transcribeAudio, textToSpeech } = require("../services/speech.service");
+const {
+  transcribeAudio,
+  textToSpeech,
+  mapSpeechError,
+  mapTextToSpeechError,
+} = require("../services/speech.service");
 
 async function speechToText(req, res) {
   try {
     const text = await transcribeAudio(req);
     return res.success("Speech transcribed successfully.", { text });
   } catch (error) {
-    return res.error("Failed to transcribe speech.", 500, error.message);
+    const mapped = mapSpeechError(error);
+    return res.error("Failed to transcribe speech.", mapped.statusCode, mapped.message);
   }
 }
 
@@ -21,7 +27,8 @@ async function convertTextToSpeech(req, res) {
 
     return res.success("Text converted to speech successfully.", { audioUrl });
   } catch (error) {
-    return res.error("Failed to convert text to speech.", 500, error.message);
+    const mapped = mapTextToSpeechError(error);
+    return res.error("Failed to convert text to speech.", mapped.statusCode, mapped.message);
   }
 }
 
