@@ -1,4 +1,31 @@
-const { generateMentorResponse, saveMentorConversation } = require("../services/ai.service");
+const {
+  generateMentorResponse,
+  saveMentorConversation,
+  mapOpenAiError,
+} = require("../services/ai.service");
+
+function isFallbackEnabled() {
+  const envValue = String(process.env.AI_FALLBACK_ON_429 || "").toLowerCase();
+
+  if (envValue === "true" || envValue === "1") {
+    return true;
+  }
+
+  if (envValue === "false" || envValue === "0") {
+    return false;
+  }
+
+  return process.env.NODE_ENV !== "production";
+}
+
+function buildFallbackMentorResponse(message) {
+  return {
+    correction: message,
+    explanation:
+      "This is a fallback mentor response because AI quota/rate limit was reached. Please top up OpenAI billing for real corrections.",
+    nextQuestion: "Can you rewrite your sentence in past tense and send again?",
+  };
+}
 
 async function chatWithMentor(req, res) {
   try {
@@ -12,7 +39,24 @@ async function chatWithMentor(req, res) {
 
     return res.success("AI mentor response generated.", mentorResult);
   } catch (error) {
-    return res.error("Failed to process AI mentor chat.", 500, error.message);
+    const mapped = mapOpenAiError(error);
+
+    if (mapped.statusCode === 429 && isFallbackEnabled()) {
+      const message = String(req.body.message || "").trim();
+      const fallbackResult = buildFallbackMentorResponse(message);
+      try {
+        await saveMentorConversation(req.user.userId, message, fallbackResult);
+      } catch (_dbError) {
+        // Do not block frontend flow if fallback persistence fails.
+      }
+
+      return res.success("AI quota exceeded, returned fallback mentor response.", {
+        ...fallbackResult,
+        isFallback: true,
+      });
+    }
+
+    return res.error("Failed to process AI mentor chat.", mapped.statusCode, mapped.message);
   }
 }
 
