@@ -88,6 +88,16 @@ class User extends Model {
       foreignKey: "user_id",
       as: "onboardingAnswers",
     });
+
+    User.hasMany(models.Conversation, {
+      foreignKey: "user_id",
+      as: "mentorConversations",
+    });
+
+    User.hasMany(models.ConversationSession, {
+      foreignKey: "user_id",
+      as: "conversationSessions",
+    });
   }
 }
 
