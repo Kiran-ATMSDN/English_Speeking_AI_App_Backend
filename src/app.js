@@ -13,7 +13,7 @@ const { responseFormatter } = require("./middlewares/response.middleware");
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "35mb" }));
 app.use(responseFormatter);
 app.use("/public", express.static(path.join(process.cwd(), "public")));
 
@@ -28,5 +28,17 @@ app.use("/api/v1/subscriptions", subscriptionRoutes);
 app.use("/api/v1/ai", aiRoutes);
 app.use("/api/v1/speech", speechRoutes);
 app.use("/api/v1/conversations", conversationRoutes);
+
+app.use((error, _req, res, next) => {
+  if (error?.type === "entity.too.large") {
+    return res.status(413).json({
+      success: false,
+      message:
+        "Payload too large. For speech-to-text, upload raw audio file (audio/*) and keep size under 25MB.",
+    });
+  }
+
+  return next(error);
+});
 
 module.exports = app;
