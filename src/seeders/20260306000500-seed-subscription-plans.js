@@ -11,11 +11,11 @@ module.exports = {
         price_inr: 0,
         billing_cycle: "monthly",
         benefit_summary: "Basic plan for everyday spoken English practice.",
-        feature_list: [
+        feature_list: JSON.stringify([
           "Daily basic conversation practice",
           "Limited grammar correction",
           "Community support",
-        ],
+        ]),
         is_highlighted: false,
         created_at: now,
         updated_at: now,
@@ -25,12 +25,12 @@ module.exports = {
         price_inr: 499,
         billing_cycle: "monthly",
         benefit_summary: "Advanced plan with guided improvement and full access.",
-        feature_list: [
+        feature_list: JSON.stringify([
           "Unlimited AI speaking sessions",
           "Advanced pronunciation feedback",
           "Personalized learning roadmap",
           "Priority support",
-        ],
+        ]),
         is_highlighted: true,
         created_at: now,
         updated_at: now,
