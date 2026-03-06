@@ -9,6 +9,20 @@ class User extends Model {
           primaryKey: true,
           autoIncrement: true,
         },
+        fullName: {
+          type: DataTypes.STRING(120),
+          allowNull: false,
+          field: "full_name",
+        },
+        email: {
+          type: DataTypes.STRING(120),
+          allowNull: true,
+          unique: true,
+          field: "email",
+          validate: {
+            isEmail: true,
+          },
+        },
         mobileNumber: {
           type: DataTypes.STRING(15),
           allowNull: false,
@@ -27,7 +41,7 @@ class User extends Model {
         isMobileVerified: {
           type: DataTypes.BOOLEAN,
           allowNull: false,
-          defaultValue: false,
+          defaultValue: true,
           field: "is_mobile_verified",
         },
         learningPurpose: {
