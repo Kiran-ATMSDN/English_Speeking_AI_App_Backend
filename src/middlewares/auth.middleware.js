@@ -7,7 +7,7 @@ function authenticate(req, res, next) {
     : null;
 
   if (!token) {
-    return res.status(401).json({ message: "Authorization token is missing." });
+    return res.error("Authorization token is missing.", 401);
   }
 
   try {
@@ -15,7 +15,7 @@ function authenticate(req, res, next) {
     req.user = payload;
     return next();
   } catch (_error) {
-    return res.status(401).json({ message: "Invalid or expired token." });
+    return res.error("Invalid or expired token.", 401);
   }
 }
 

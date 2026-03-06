@@ -7,10 +7,7 @@ const onboardingQuestions = [
 ];
 
 async function getOnboardingQuestions(_req, res) {
-  return res.status(200).json({
-    message: "Onboarding questions fetched successfully.",
-    data: onboardingQuestions,
-  });
+  return res.success("Onboarding questions fetched successfully.", onboardingQuestions);
 }
 
 async function saveOnboardingAnswer(req, res) {
@@ -18,9 +15,7 @@ async function saveOnboardingAnswer(req, res) {
     const { questionKey, questionText, answerText } = req.body;
 
     if (!questionKey || !questionText || !answerText) {
-      return res.status(400).json({
-        message: "questionKey, questionText and answerText are required.",
-      });
+      return res.error("questionKey, questionText and answerText are required.", 400);
     }
 
     const answer = await UserOnboardingAnswer.create({
@@ -37,15 +32,9 @@ async function saveOnboardingAnswer(req, res) {
       );
     }
 
-    return res.status(201).json({
-      message: "Onboarding answer saved.",
-      data: answer,
-    });
+    return res.success("Onboarding answer saved.", answer, 201);
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to save onboarding answer.",
-      error: error.message,
-    });
+    return res.error("Failed to save onboarding answer.", 500, error.message);
   }
 }
 
@@ -56,15 +45,9 @@ async function getMyOnboardingAnswers(req, res) {
       order: [["createdAt", "DESC"]],
     });
 
-    return res.status(200).json({
-      message: "Onboarding answers fetched successfully.",
-      data: answers,
-    });
+    return res.success("Onboarding answers fetched successfully.", answers);
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to fetch onboarding answers.",
-      error: error.message,
-    });
+    return res.error("Failed to fetch onboarding answers.", 500, error.message);
   }
 }
 

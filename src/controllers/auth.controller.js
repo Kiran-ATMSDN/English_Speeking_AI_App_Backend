@@ -38,13 +38,11 @@ async function signup(req, res) {
     const countryCode = req.body.countryCode || "+91";
 
     if (!fullName) {
-      return res.status(400).json({ message: "fullName is required." });
+      return res.error("fullName is required.", 400);
     }
 
     if (!isValidMobileNumber(mobileNumber)) {
-      return res.status(400).json({
-        message: "Please provide a valid mobileNumber (10 to 15 digits).",
-      });
+      return res.error("Please provide a valid mobileNumber (10 to 15 digits).", 400);
     }
 
     const existingUser = await User.findOne({
@@ -52,9 +50,7 @@ async function signup(req, res) {
     });
 
     if (existingUser) {
-      return res.status(409).json({
-        message: "User already exists with this mobile number. Please login.",
-      });
+      return res.error("User already exists with this mobile number. Please login.", 409);
     }
 
     const user = await User.create({
@@ -67,13 +63,16 @@ async function signup(req, res) {
 
     const token = buildToken(user);
 
-    return res.status(201).json({
-      message: "Signup successful.",
-      token,
-      user: buildUserPayload(user),
-    });
+    return res.success(
+      "Signup successful.",
+      {
+        token,
+        user: buildUserPayload(user),
+      },
+      201
+    );
   } catch (error) {
-    return res.status(500).json({ message: "Signup failed.", error: error.message });
+    return res.error("Signup failed.", 500, error.message);
   }
 }
 
@@ -82,9 +81,7 @@ async function login(req, res) {
     const mobileNumber = normalizeMobileNumber(req.body.mobileNumber);
 
     if (!isValidMobileNumber(mobileNumber)) {
-      return res.status(400).json({
-        message: "Please provide a valid mobileNumber (10 to 15 digits).",
-      });
+      return res.error("Please provide a valid mobileNumber (10 to 15 digits).", 400);
     }
 
     const user = await User.findOne({
@@ -92,18 +89,17 @@ async function login(req, res) {
     });
 
     if (!user) {
-      return res.status(404).json({ message: "User not found. Please signup first." });
+      return res.error("User not found. Please signup first.", 404);
     }
 
     const token = buildToken(user);
 
-    return res.status(200).json({
-      message: "Login successful.",
+    return res.success("Login successful.", {
       token,
       user: buildUserPayload(user),
     });
   } catch (error) {
-    return res.status(500).json({ message: "Login failed.", error: error.message });
+    return res.error("Login failed.", 500, error.message);
   }
 }
 
@@ -113,9 +109,7 @@ async function sendOtp(req, res) {
     const countryCode = req.body.countryCode || "+91";
 
     if (!isValidMobileNumber(mobileNumber)) {
-      return res.status(400).json({
-        message: "Please provide a valid mobileNumber (10 to 15 digits).",
-      });
+      return res.error("Please provide a valid mobileNumber (10 to 15 digits).", 400);
     }
 
     const [user] = await User.findOrCreate({
@@ -131,14 +125,13 @@ async function sendOtp(req, res) {
 
     const { otp, expiresAt } = await createAndStoreOtp(user.id, mobileNumber);
 
-    return res.status(200).json({
-      message: "OTP sent successfully.",
+    return res.success("OTP sent successfully.", {
       mobileNumber,
       expiresAt,
       ...(process.env.NODE_ENV !== "production" ? { otp } : {}),
     });
   } catch (error) {
-    return res.status(500).json({ message: "Failed to send OTP.", error: error.message });
+    return res.error("Failed to send OTP.", 500, error.message);
   }
 }
 
@@ -148,14 +141,12 @@ async function verifyOtp(req, res) {
     const otp = String(req.body.otp || "").trim();
 
     if (!isValidMobileNumber(mobileNumber) || !/^\d{6}$/.test(otp)) {
-      return res.status(400).json({
-        message: "Invalid mobileNumber or otp format.",
-      });
+      return res.error("Invalid mobileNumber or otp format.", 400);
     }
 
     const user = await User.findOne({ where: { mobileNumber } });
     if (!user) {
-      return res.status(404).json({ message: "User not found. Please signup first." });
+      return res.error("User not found. Please signup first.", 404);
     }
 
     const otpRecord = await OtpCode.findOne({
@@ -170,7 +161,7 @@ async function verifyOtp(req, res) {
     });
 
     if (!otpRecord) {
-      return res.status(401).json({ message: "Invalid or expired OTP." });
+      return res.error("Invalid or expired OTP.", 401);
     }
 
     await otpRecord.update({ isUsed: true });
@@ -179,13 +170,12 @@ async function verifyOtp(req, res) {
     const token = buildToken(user);
     const refreshedUser = await User.findByPk(user.id);
 
-    return res.status(200).json({
-      message: "OTP verified successfully.",
+    return res.success("OTP verified successfully.", {
       token,
       user: buildUserPayload(refreshedUser),
     });
   } catch (error) {
-    return res.status(500).json({ message: "Failed to verify OTP.", error: error.message });
+    return res.error("Failed to verify OTP.", 500, error.message);
   }
 }
 

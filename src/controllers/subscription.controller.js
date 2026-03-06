@@ -9,15 +9,9 @@ async function getSubscriptionPlans(_req, res) {
       ],
     });
 
-    return res.status(200).json({
-      message: "Subscription plans fetched successfully.",
-      data: plans,
-    });
+    return res.success("Subscription plans fetched successfully.", plans);
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to fetch subscription plans.",
-      error: error.message,
-    });
+    return res.error("Failed to fetch subscription plans.", 500, error.message);
   }
 }
 
@@ -26,16 +20,14 @@ async function selectSubscriptionPlan(req, res) {
     const { planName, planId } = req.body;
 
     if (!planName && !planId) {
-      return res.status(400).json({
-        message: "Provide either planName or planId.",
-      });
+      return res.error("Provide either planName or planId.", 400);
     }
 
     const where = planId ? { id: planId } : { name: planName };
     const plan = await SubscriptionPlan.findOne({ where });
 
     if (!plan) {
-      return res.status(404).json({ message: "Subscription plan not found." });
+      return res.error("Subscription plan not found.", 404);
     }
 
     await User.update(
@@ -43,20 +35,14 @@ async function selectSubscriptionPlan(req, res) {
       { where: { id: req.user.userId } }
     );
 
-    return res.status(200).json({
-      message: "Subscription plan selected successfully.",
-      data: {
-        id: plan.id,
-        name: plan.name,
-        priceInr: plan.priceInr,
-        billingCycle: plan.billingCycle,
-      },
+    return res.success("Subscription plan selected successfully.", {
+      id: plan.id,
+      name: plan.name,
+      priceInr: plan.priceInr,
+      billingCycle: plan.billingCycle,
     });
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to select subscription plan.",
-      error: error.message,
-    });
+    return res.error("Failed to select subscription plan.", 500, error.message);
   }
 }
 
@@ -81,18 +67,12 @@ async function getCurrentSubscription(req, res) {
     });
 
     if (!user) {
-      return res.status(404).json({ message: "User not found." });
+      return res.error("User not found.", 404);
     }
 
-    return res.status(200).json({
-      message: "Current subscription fetched successfully.",
-      data: user.subscriptionPlan,
-    });
+    return res.success("Current subscription fetched successfully.", user.subscriptionPlan);
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to fetch current subscription.",
-      error: error.message,
-    });
+    return res.error("Failed to fetch current subscription.", 500, error.message);
   }
 }
 

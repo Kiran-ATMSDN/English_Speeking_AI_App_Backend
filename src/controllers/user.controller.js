@@ -13,18 +13,12 @@ async function getMyProfile(req, res) {
     });
 
     if (!user) {
-      return res.status(404).json({ message: "User not found." });
+      return res.error("User not found.", 404);
     }
 
-    return res.status(200).json({
-      message: "Profile fetched successfully.",
-      data: user,
-    });
+    return res.success("Profile fetched successfully.", user);
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to fetch profile.",
-      error: error.message,
-    });
+    return res.error("Failed to fetch profile.", 500, error.message);
   }
 }
 
@@ -46,27 +40,19 @@ async function updateMyProfile(req, res) {
     }
 
     if (Object.keys(updates).length === 0) {
-      return res.status(400).json({
-        message: "Provide at least one field: fullName, email, learningPurpose.",
-      });
+      return res.error("Provide at least one field: fullName, email, learningPurpose.", 400);
     }
 
     const user = await User.findByPk(req.user.userId);
     if (!user) {
-      return res.status(404).json({ message: "User not found." });
+      return res.error("User not found.", 404);
     }
 
     await user.update(updates);
 
-    return res.status(200).json({
-      message: "Profile updated successfully.",
-      data: user,
-    });
+    return res.success("Profile updated successfully.", user);
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to update profile.",
-      error: error.message,
-    });
+    return res.error("Failed to update profile.", 500, error.message);
   }
 }
 
