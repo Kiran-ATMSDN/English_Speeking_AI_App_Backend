@@ -5,9 +5,9 @@ const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini";
 
 function getOpenAiKey() {
-  const key = process.env.OPENAI_API_KEY;
+  const key = process.env.OPENAI_API_KEY || process.env.OPENAI_KEY;
   if (!key) {
-    throw new Error("OPENAI_API_KEY is not configured.");
+    throw new Error("OpenAI key is missing. Set OPENAI_API_KEY (or OPENAI_KEY) in backend .env and restart server.");
   }
   return key;
 }

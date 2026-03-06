@@ -11,9 +11,9 @@ const TTS_MODEL = process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts";
 const TTS_VOICE = process.env.OPENAI_TTS_VOICE || "alloy";
 
 function getOpenAiKey() {
-  const key = process.env.OPENAI_API_KEY;
+  const key = process.env.OPENAI_API_KEY || process.env.OPENAI_KEY;
   if (!key) {
-    throw new Error("OPENAI_API_KEY is not configured.");
+    throw new Error("OpenAI key is missing. Set OPENAI_API_KEY (or OPENAI_KEY) in backend .env and restart server.");
   }
   return key;
 }
