@@ -1,10 +1,56 @@
-const { User, UserOnboardingAnswer } = require("../models");
+const { User, UserOnboardingAnswer, VocabularyWord } = require("../models");
+
 const onboardingQuestions = [
   {
     questionKey: "learning_purpose",
     questionText: "What is your purpose to learn English?",
   },
 ];
+
+const TOTAL_DAYS = 100;
+const WORDS_PER_DAY = 5;
+
+function getDateOnly(value) {
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function getDayNumberFromStartDate(startDate) {
+  const today = getDateOnly(new Date());
+  const start = getDateOnly(startDate);
+  const diffMs = today.getTime() - start.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const day = diffDays + 1;
+
+  if (day < 1) {
+    return 1;
+  }
+  if (day > TOTAL_DAYS) {
+    return TOTAL_DAYS;
+  }
+  return day;
+}
+
+function getLevelByDay(dayNumber) {
+  if (dayNumber <= 34) {
+    return "simple";
+  }
+  if (dayNumber <= 67) {
+    return "intermediate";
+  }
+  return "advanced";
+}
+
+function levelLabel(level) {
+  if (level === "simple") {
+    return "Simple";
+  }
+  if (level === "intermediate") {
+    return "Intermediate";
+  }
+  return "Advanced";
+}
 
 async function getOnboardingQuestions(_req, res) {
   return res.success("Onboarding questions fetched successfully.", onboardingQuestions);
@@ -51,4 +97,59 @@ async function getMyOnboardingAnswers(req, res) {
   }
 }
 
-module.exports = { getOnboardingQuestions, saveOnboardingAnswer, getMyOnboardingAnswers };
+async function getDailyVocabulary(req, res) {
+  try {
+    const user = await User.findByPk(req.user.userId, {
+      attributes: ["id", "createdAt"],
+    });
+
+    if (!user) {
+      return res.error("User not found.", 404);
+    }
+
+    const requestedDay = Number.parseInt(req.query.day, 10);
+    const fallbackDay = getDayNumberFromStartDate(user.createdAt);
+    const dayNumber =
+      Number.isInteger(requestedDay) && requestedDay >= 1 && requestedDay <= TOTAL_DAYS
+        ? requestedDay
+        : fallbackDay;
+
+    const level = getLevelByDay(dayNumber);
+    const wordsFromDb = await VocabularyWord.findAll({
+      where: { level },
+      order: [["sortOrder", "ASC"], ["id", "ASC"]],
+      attributes: ["word", "meaningEn", "meaningHi", "example"],
+    });
+
+    if (!wordsFromDb.length) {
+      return res.error(
+        "Vocabulary words are not seeded in database. Run migrations and seeders.",
+        500
+      );
+    }
+
+    const start = ((dayNumber - 1) * WORDS_PER_DAY) % wordsFromDb.length;
+    const words = [];
+    for (let i = 0; i < WORDS_PER_DAY; i += 1) {
+      words.push(wordsFromDb[(start + i) % wordsFromDb.length]);
+    }
+
+    return res.success("Daily vocabulary fetched successfully.", {
+      dayNumber,
+      totalDays: TOTAL_DAYS,
+      wordsPerDay: WORDS_PER_DAY,
+      level: levelLabel(level),
+      words,
+      date: new Date().toISOString().slice(0, 10),
+    });
+  } catch (error) {
+    return res.error("Failed to fetch daily vocabulary.", 500, error.message);
+  }
+}
+
+module.exports = {
+  getOnboardingQuestions,
+  saveOnboardingAnswer,
+  getMyOnboardingAnswers,
+  getDailyVocabulary,
+};

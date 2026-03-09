@@ -8,6 +8,7 @@ const UserOnboardingAnswer = require("./user-onboarding-answer.model");
 const Conversation = require("./conversation.model");
 const ConversationSession = require("./conversation-session.model");
 const ConversationMessage = require("./conversation-message.model");
+const VocabularyWord = require("./vocabulary-word.model");
 
 const models = {
   User: User.initModel(sequelize, DataTypes),
@@ -17,6 +18,7 @@ const models = {
   Conversation: Conversation.initModel(sequelize, DataTypes),
   ConversationSession: ConversationSession.initModel(sequelize, DataTypes),
   ConversationMessage: ConversationMessage.initModel(sequelize, DataTypes),
+  VocabularyWord: VocabularyWord.initModel(sequelize, DataTypes),
 };
 
 Object.values(models).forEach((model) => {
