@@ -1,4 +1,12 @@
-const { User, UserOnboardingAnswer, VocabularyWord } = require("../models");
+const {
+  User,
+  UserOnboardingAnswer,
+  VocabularyWord,
+  GrammarLesson,
+  CommonSentence,
+  ConversationScript,
+  PronunciationTip,
+} = require("../models");
 
 const onboardingQuestions = [
   {
@@ -9,6 +17,8 @@ const onboardingQuestions = [
 
 const TOTAL_DAYS = 100;
 const WORDS_PER_DAY = 5;
+const SENTENCES_PER_DAY = 5;
+const PRONUNCIATION_TIPS_PER_DAY = 5;
 
 function getDateOnly(value) {
   const date = new Date(value);
@@ -144,9 +154,175 @@ async function getDailyVocabulary(req, res) {
   }
 }
 
+async function getGrammarLessons(req, res) {
+  try {
+    const requestedDay = Number.parseInt(req.query.day, 10);
+    const totalDays = await GrammarLesson.count();
+
+    if (!totalDays) {
+      return res.error("Grammar lessons are not seeded in database. Run migrations and seeders.", 500);
+    }
+
+    let dayNumber = Number.isInteger(requestedDay) ? requestedDay : 1;
+    if (dayNumber < 1) {
+      dayNumber = 1;
+    }
+    if (dayNumber > totalDays) {
+      dayNumber = totalDays;
+    }
+
+    const lesson = await GrammarLesson.findOne({
+      where: { dayNumber },
+      attributes: ["dayNumber", "level", "title", "explanation", "formula", "examples"],
+    });
+
+    if (!lesson) {
+      return res.error("Grammar lesson not found for requested day.", 404);
+    }
+
+    return res.success("Grammar lesson fetched successfully.", {
+      dayNumber: lesson.dayNumber,
+      totalDays,
+      level: lesson.level,
+      lesson: {
+        title: lesson.title,
+        explanation: lesson.explanation,
+        formula: lesson.formula,
+        examples: lesson.examples || [],
+      },
+    });
+  } catch (error) {
+    return res.error("Failed to fetch grammar lesson.", 500, error.message);
+  }
+}
+
+async function getCommonSentences(req, res) {
+  try {
+    const requestedDay = Number.parseInt(req.query.day, 10);
+    let dayNumber = Number.isInteger(requestedDay) ? requestedDay : 1;
+
+    if (dayNumber < 1) {
+      dayNumber = 1;
+    }
+    if (dayNumber > TOTAL_DAYS) {
+      dayNumber = TOTAL_DAYS;
+    }
+
+    const level = getLevelByDay(dayNumber);
+    const sentencesFromDb = await CommonSentence.findAll({
+      where: { level },
+      order: [["sortOrder", "ASC"], ["id", "ASC"]],
+      attributes: ["sentence", "meaningHi", "usageTip"],
+    });
+
+    if (!sentencesFromDb.length) {
+      return res.error("Common sentences are not seeded in database. Run migrations and seeders.", 500);
+    }
+
+    const start = ((dayNumber - 1) * SENTENCES_PER_DAY) % sentencesFromDb.length;
+    const sentences = [];
+    for (let i = 0; i < SENTENCES_PER_DAY; i += 1) {
+      sentences.push(sentencesFromDb[(start + i) % sentencesFromDb.length]);
+    }
+
+    return res.success("Common sentences fetched successfully.", {
+      dayNumber,
+      totalDays: TOTAL_DAYS,
+      sentencesPerDay: SENTENCES_PER_DAY,
+      level: levelLabel(level),
+      sentences,
+      date: new Date().toISOString().slice(0, 10),
+    });
+  } catch (error) {
+    return res.error("Failed to fetch common sentences.", 500, error.message);
+  }
+}
+
+async function getConversationScripts(req, res) {
+  try {
+    const requestedDay = Number.parseInt(req.query.day, 10);
+    let dayNumber = Number.isInteger(requestedDay) ? requestedDay : 1;
+
+    if (dayNumber < 1) {
+      dayNumber = 1;
+    }
+    if (dayNumber > TOTAL_DAYS) {
+      dayNumber = TOTAL_DAYS;
+    }
+
+    const script = await ConversationScript.findOne({
+      where: { dayNumber },
+      attributes: ["dayNumber", "level", "title", "context", "lines"],
+    });
+
+    if (!script) {
+      return res.error("Conversation scripts are not seeded in database. Run migrations and seeders.", 500);
+    }
+
+    return res.success("Conversation script fetched successfully.", {
+      dayNumber: script.dayNumber,
+      totalDays: TOTAL_DAYS,
+      level: script.level,
+      script: {
+        title: script.title,
+        context: script.context,
+        lines: script.lines || [],
+      },
+    });
+  } catch (error) {
+    return res.error("Failed to fetch conversation script.", 500, error.message);
+  }
+}
+
+async function getPronunciationTips(req, res) {
+  try {
+    const requestedDay = Number.parseInt(req.query.day, 10);
+    let dayNumber = Number.isInteger(requestedDay) ? requestedDay : 1;
+
+    if (dayNumber < 1) {
+      dayNumber = 1;
+    }
+    if (dayNumber > TOTAL_DAYS) {
+      dayNumber = TOTAL_DAYS;
+    }
+
+    const level = getLevelByDay(dayNumber);
+    const tipsFromDb = await PronunciationTip.findAll({
+      where: { level },
+      order: [["sortOrder", "ASC"], ["id", "ASC"]],
+      attributes: ["title", "guide", "example"],
+    });
+
+    if (!tipsFromDb.length) {
+      return res.error("Pronunciation tips are not seeded in database. Run migrations and seeders.", 500);
+    }
+
+    const start = ((dayNumber - 1) * PRONUNCIATION_TIPS_PER_DAY) % tipsFromDb.length;
+    const tips = [];
+    for (let i = 0; i < PRONUNCIATION_TIPS_PER_DAY; i += 1) {
+      tips.push(tipsFromDb[(start + i) % tipsFromDb.length]);
+    }
+
+    return res.success("Pronunciation tips fetched successfully.", {
+      dayNumber,
+      totalDays: TOTAL_DAYS,
+      tipsPerDay: PRONUNCIATION_TIPS_PER_DAY,
+      level: levelLabel(level),
+      tips,
+      date: new Date().toISOString().slice(0, 10),
+    });
+  } catch (error) {
+    return res.error("Failed to fetch pronunciation tips.", 500, error.message);
+  }
+}
+
 module.exports = {
   getOnboardingQuestions,
   saveOnboardingAnswer,
   getMyOnboardingAnswers,
   getDailyVocabulary,
+  getGrammarLessons,
+  getCommonSentences,
+  getConversationScripts,
+  getPronunciationTips,
 };

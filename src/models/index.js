@@ -9,6 +9,10 @@ const Conversation = require("./conversation.model");
 const ConversationSession = require("./conversation-session.model");
 const ConversationMessage = require("./conversation-message.model");
 const VocabularyWord = require("./vocabulary-word.model");
+const GrammarLesson = require("./grammar-lesson.model");
+const CommonSentence = require("./common-sentence.model");
+const ConversationScript = require("./conversation-script.model");
+const PronunciationTip = require("./pronunciation-tip.model");
 
 const models = {
   User: User.initModel(sequelize, DataTypes),
@@ -19,6 +23,10 @@ const models = {
   ConversationSession: ConversationSession.initModel(sequelize, DataTypes),
   ConversationMessage: ConversationMessage.initModel(sequelize, DataTypes),
   VocabularyWord: VocabularyWord.initModel(sequelize, DataTypes),
+  GrammarLesson: GrammarLesson.initModel(sequelize, DataTypes),
+  CommonSentence: CommonSentence.initModel(sequelize, DataTypes),
+  ConversationScript: ConversationScript.initModel(sequelize, DataTypes),
+  PronunciationTip: PronunciationTip.initModel(sequelize, DataTypes),
 };
 
 Object.values(models).forEach((model) => {
