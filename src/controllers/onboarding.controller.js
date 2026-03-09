@@ -109,10 +109,7 @@ async function getDailyVocabulary(req, res) {
 
     const requestedDay = Number.parseInt(req.query.day, 10);
     const fallbackDay = getDayNumberFromStartDate(user.createdAt);
-    const dayNumber =
-      Number.isInteger(requestedDay) && requestedDay >= 1 && requestedDay <= TOTAL_DAYS
-        ? requestedDay
-        : fallbackDay;
+    const dayNumber =Number.isInteger(requestedDay) && requestedDay >= 1 && requestedDay <= TOTAL_DAYS? requestedDay: fallbackDay;
 
     const level = getLevelByDay(dayNumber);
     const wordsFromDb = await VocabularyWord.findAll({
