@@ -6,6 +6,7 @@ const {
   CommonSentence,
   ConversationScript,
   PronunciationTip,
+  EnglishLearningTip,
 } = require("../models");
 
 const onboardingQuestions = [
@@ -19,6 +20,7 @@ const TOTAL_DAYS = 100;
 const WORDS_PER_DAY = 5;
 const SENTENCES_PER_DAY = 5;
 const PRONUNCIATION_TIPS_PER_DAY = 5;
+const ENGLISH_LEARNING_TIPS_PER_DAY = 5;
 
 function getDateOnly(value) {
   const date = new Date(value);
@@ -316,6 +318,48 @@ async function getPronunciationTips(req, res) {
   }
 }
 
+async function getEnglishLearningTips(req, res) {
+  try {
+    const requestedDay = Number.parseInt(req.query.day, 10);
+    let dayNumber = Number.isInteger(requestedDay) ? requestedDay : 1;
+
+    if (dayNumber < 1) {
+      dayNumber = 1;
+    }
+    if (dayNumber > TOTAL_DAYS) {
+      dayNumber = TOTAL_DAYS;
+    }
+
+    const level = getLevelByDay(dayNumber);
+    const tipsFromDb = await EnglishLearningTip.findAll({
+      where: { level },
+      order: [["sortOrder", "ASC"], ["id", "ASC"]],
+      attributes: ["title", "description", "actionStep"],
+    });
+
+    if (!tipsFromDb.length) {
+      return res.error("English learning tips are not seeded in database. Run migrations and seeders.", 500);
+    }
+
+    const start = ((dayNumber - 1) * ENGLISH_LEARNING_TIPS_PER_DAY) % tipsFromDb.length;
+    const tips = [];
+    for (let i = 0; i < ENGLISH_LEARNING_TIPS_PER_DAY; i += 1) {
+      tips.push(tipsFromDb[(start + i) % tipsFromDb.length]);
+    }
+
+    return res.success("English learning tips fetched successfully.", {
+      dayNumber,
+      totalDays: TOTAL_DAYS,
+      tipsPerDay: ENGLISH_LEARNING_TIPS_PER_DAY,
+      level: levelLabel(level),
+      tips,
+      date: new Date().toISOString().slice(0, 10),
+    });
+  } catch (error) {
+    return res.error("Failed to fetch English learning tips.", 500, error.message);
+  }
+}
+
 module.exports = {
   getOnboardingQuestions,
   saveOnboardingAnswer,
@@ -325,4 +369,5 @@ module.exports = {
   getCommonSentences,
   getConversationScripts,
   getPronunciationTips,
+  getEnglishLearningTips,
 };

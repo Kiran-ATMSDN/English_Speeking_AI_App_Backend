@@ -13,6 +13,7 @@ const GrammarLesson = require("./grammar-lesson.model");
 const CommonSentence = require("./common-sentence.model");
 const ConversationScript = require("./conversation-script.model");
 const PronunciationTip = require("./pronunciation-tip.model");
+const EnglishLearningTip = require("./english-learning-tip.model");
 
 const models = {
   User: User.initModel(sequelize, DataTypes),
@@ -27,6 +28,7 @@ const models = {
   CommonSentence: CommonSentence.initModel(sequelize, DataTypes),
   ConversationScript: ConversationScript.initModel(sequelize, DataTypes),
   PronunciationTip: PronunciationTip.initModel(sequelize, DataTypes),
+  EnglishLearningTip: EnglishLearningTip.initModel(sequelize, DataTypes),
 };
 
 Object.values(models).forEach((model) => {

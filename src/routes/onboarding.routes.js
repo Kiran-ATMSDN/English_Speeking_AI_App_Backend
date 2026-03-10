@@ -8,6 +8,7 @@ const {
   getCommonSentences,
   getConversationScripts,
   getPronunciationTips,
+  getEnglishLearningTips,
 } = require("../controllers/onboarding.controller");
 const { authenticate } = require("../middlewares/auth.middleware");
 
@@ -21,5 +22,6 @@ router.get("/grammar-lessons", authenticate, getGrammarLessons);
 router.get("/common-sentences", authenticate, getCommonSentences);
 router.get("/conversation-scripts", authenticate, getConversationScripts);
 router.get("/pronunciation-tips", authenticate, getPronunciationTips);
+router.get("/english-learning-tips", authenticate, getEnglishLearningTips);
 
 module.exports = router;
