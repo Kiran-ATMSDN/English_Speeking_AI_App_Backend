@@ -14,6 +14,10 @@ const CommonSentence = require("./common-sentence.model");
 const ConversationScript = require("./conversation-script.model");
 const PronunciationTip = require("./pronunciation-tip.model");
 const EnglishLearningTip = require("./english-learning-tip.model");
+const MiniQuiz = require("./mini-quiz.model");
+const EnglishIdiom = require("./english-idiom.model");
+const WordOfTheDay = require("./word-of-the-day.model");
+const MotivationalMessage = require("./motivational-message.model");
 
 const models = {
   User: User.initModel(sequelize, DataTypes),
@@ -29,6 +33,10 @@ const models = {
   ConversationScript: ConversationScript.initModel(sequelize, DataTypes),
   PronunciationTip: PronunciationTip.initModel(sequelize, DataTypes),
   EnglishLearningTip: EnglishLearningTip.initModel(sequelize, DataTypes),
+  MiniQuiz: MiniQuiz.initModel(sequelize, DataTypes),
+  EnglishIdiom: EnglishIdiom.initModel(sequelize, DataTypes),
+  WordOfTheDay: WordOfTheDay.initModel(sequelize, DataTypes),
+  MotivationalMessage: MotivationalMessage.initModel(sequelize, DataTypes),
 };
 
 Object.values(models).forEach((model) => {

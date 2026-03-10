@@ -7,6 +7,10 @@ const {
   ConversationScript,
   PronunciationTip,
   EnglishLearningTip,
+  MiniQuiz,
+  EnglishIdiom,
+  WordOfTheDay,
+  MotivationalMessage,
 } = require("../models");
 
 const onboardingQuestions = [
@@ -21,6 +25,8 @@ const WORDS_PER_DAY = 5;
 const SENTENCES_PER_DAY = 5;
 const PRONUNCIATION_TIPS_PER_DAY = 5;
 const ENGLISH_LEARNING_TIPS_PER_DAY = 5;
+const IDIOMS_PER_DAY = 5;
+const MOTIVATIONAL_MESSAGES_PER_DAY = 3;
 
 function getDateOnly(value) {
   const date = new Date(value);
@@ -360,6 +366,165 @@ async function getEnglishLearningTips(req, res) {
   }
 }
 
+async function getMiniQuiz(req, res) {
+  try {
+    const requestedDay = Number.parseInt(req.query.day, 10);
+    let dayNumber = Number.isInteger(requestedDay) ? requestedDay : 1;
+
+    if (dayNumber < 1) {
+      dayNumber = 1;
+    }
+    if (dayNumber > TOTAL_DAYS) {
+      dayNumber = TOTAL_DAYS;
+    }
+
+    const quiz = await MiniQuiz.findOne({
+      where: { dayNumber },
+      attributes: ["dayNumber", "level", "question", "options", "correctAnswerIndex", "explanation"],
+    });
+
+    if (!quiz) {
+      return res.error("Mini quizzes are not seeded in database. Run migrations and seeders.", 500);
+    }
+
+    return res.success("Mini quiz fetched successfully.", {
+      dayNumber: quiz.dayNumber,
+      totalDays: TOTAL_DAYS,
+      level: quiz.level,
+      quiz: {
+        question: quiz.question,
+        options: quiz.options || [],
+        correctAnswerIndex: quiz.correctAnswerIndex,
+        explanation: quiz.explanation,
+      },
+    });
+  } catch (error) {
+    return res.error("Failed to fetch mini quiz.", 500, error.message);
+  }
+}
+
+async function getEnglishIdioms(req, res) {
+  try {
+    const requestedDay = Number.parseInt(req.query.day, 10);
+    let dayNumber = Number.isInteger(requestedDay) ? requestedDay : 1;
+
+    if (dayNumber < 1) {
+      dayNumber = 1;
+    }
+    if (dayNumber > TOTAL_DAYS) {
+      dayNumber = TOTAL_DAYS;
+    }
+
+    const level = getLevelByDay(dayNumber);
+    const idiomsFromDb = await EnglishIdiom.findAll({
+      where: { level },
+      order: [["sortOrder", "ASC"], ["id", "ASC"]],
+      attributes: ["idiom", "meaning", "meaningHi", "example"],
+    });
+
+    if (!idiomsFromDb.length) {
+      return res.error("English idioms are not seeded in database. Run migrations and seeders.", 500);
+    }
+
+    const start = ((dayNumber - 1) * IDIOMS_PER_DAY) % idiomsFromDb.length;
+    const idioms = [];
+    for (let i = 0; i < IDIOMS_PER_DAY; i += 1) {
+      idioms.push(idiomsFromDb[(start + i) % idiomsFromDb.length]);
+    }
+
+    return res.success("English idioms fetched successfully.", {
+      dayNumber,
+      totalDays: TOTAL_DAYS,
+      idiomsPerDay: IDIOMS_PER_DAY,
+      level: levelLabel(level),
+      idioms,
+      date: new Date().toISOString().slice(0, 10),
+    });
+  } catch (error) {
+    return res.error("Failed to fetch English idioms.", 500, error.message);
+  }
+}
+
+async function getWordOfTheDay(req, res) {
+  try {
+    const requestedDay = Number.parseInt(req.query.day, 10);
+    let dayNumber = Number.isInteger(requestedDay) ? requestedDay : 1;
+
+    if (dayNumber < 1) {
+      dayNumber = 1;
+    }
+    if (dayNumber > TOTAL_DAYS) {
+      dayNumber = TOTAL_DAYS;
+    }
+
+    const word = await WordOfTheDay.findOne({
+      where: { dayNumber },
+      attributes: ["dayNumber", "level", "word", "meaningEn", "meaningHi", "example", "tip"],
+    });
+
+    if (!word) {
+      return res.error("Word of the day data is not seeded in database. Run migrations and seeders.", 500);
+    }
+
+    return res.success("Word of the day fetched successfully.", {
+      dayNumber: word.dayNumber,
+      totalDays: TOTAL_DAYS,
+      level: word.level,
+      word: {
+        word: word.word,
+        meaningEn: word.meaningEn,
+        meaningHi: word.meaningHi,
+        example: word.example,
+        tip: word.tip,
+      },
+    });
+  } catch (error) {
+    return res.error("Failed to fetch word of the day.", 500, error.message);
+  }
+}
+
+async function getMotivationalMessages(req, res) {
+  try {
+    const requestedDay = Number.parseInt(req.query.day, 10);
+    let dayNumber = Number.isInteger(requestedDay) ? requestedDay : 1;
+
+    if (dayNumber < 1) {
+      dayNumber = 1;
+    }
+    if (dayNumber > TOTAL_DAYS) {
+      dayNumber = TOTAL_DAYS;
+    }
+
+    const level = getLevelByDay(dayNumber);
+    const messagesFromDb = await MotivationalMessage.findAll({
+      where: { level },
+      order: [["sortOrder", "ASC"], ["id", "ASC"]],
+      attributes: ["title", "message", "takeaway"],
+    });
+
+    if (!messagesFromDb.length) {
+      return res.error("Motivational messages are not seeded in database. Run migrations and seeders.", 500);
+    }
+
+    const start = ((dayNumber - 1) * MOTIVATIONAL_MESSAGES_PER_DAY) % messagesFromDb.length;
+    const messages = [];
+    for (let i = 0; i < MOTIVATIONAL_MESSAGES_PER_DAY; i += 1) {
+      messages.push(messagesFromDb[(start + i) % messagesFromDb.length]);
+    }
+
+    return res.success("Motivational messages fetched successfully.", {
+      dayNumber,
+      totalDays: TOTAL_DAYS,
+      messagesPerDay: MOTIVATIONAL_MESSAGES_PER_DAY,
+      level: levelLabel(level),
+      messages,
+      date: new Date().toISOString().slice(0, 10),
+    });
+  } catch (error) {
+    return res.error("Failed to fetch motivational messages.", 500, error.message);
+  }
+}
+
 module.exports = {
   getOnboardingQuestions,
   saveOnboardingAnswer,
@@ -370,4 +535,8 @@ module.exports = {
   getConversationScripts,
   getPronunciationTips,
   getEnglishLearningTips,
+  getMiniQuiz,
+  getEnglishIdioms,
+  getWordOfTheDay,
+  getMotivationalMessages,
 };
