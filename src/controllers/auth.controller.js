@@ -1,7 +1,9 @@
 const jwt = require("jsonwebtoken");
 const { Op } = require("sequelize");
+const bcrypt = require("bcrypt");
 const { User, OtpCode } = require("../models");
 const { createAndStoreOtp } = require("../services/otp.service");
+const { sendOtpEmail } = require("../services/email.service");
 
 function normalizeMobileNumber(value = "") {
   return String(value).replace(/\D/g, "");
@@ -30,15 +32,36 @@ function buildUserPayload(user) {
   };
 }
 
+function normalizeEmail(value = "") {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isValidEmail(value = "") {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function isValidPassword(value = "") {
+  return String(value || "").trim().length >= 6;
+}
+
 async function signup(req, res) {
   try {
     const fullName = String(req.body.fullName || "").trim();
-    const email = req.body.email ? String(req.body.email).trim().toLowerCase() : null;
+    const email = normalizeEmail(req.body.email);
     const mobileNumber = normalizeMobileNumber(req.body.mobileNumber);
     const countryCode = req.body.countryCode || "+91";
+    const password = String(req.body.password || "");
 
     if (!fullName) {
       return res.error("fullName is required.", 400);
+    }
+
+    if (!isValidEmail(email)) {
+      return res.error("Please provide a valid email address.", 400);
+    }
+
+    if (!isValidPassword(password)) {
+      return res.error("Password must be at least 6 characters.", 400);
     }
 
     if (!isValidMobileNumber(mobileNumber)) {
@@ -46,18 +69,23 @@ async function signup(req, res) {
     }
 
     const existingUser = await User.findOne({
-      where: { mobileNumber },
+      where: {
+        [Op.or]: [{ mobileNumber }, { email }],
+      },
     });
 
     if (existingUser) {
-      return res.error("User already exists with this mobile number. Please login.", 409);
+      return res.error("User already exists with this email or mobile number. Please login.", 409);
     }
+
+    const passwordHash = await bcrypt.hash(password, 10);
 
     const user = await User.create({
       fullName,
       email,
       mobileNumber,
       countryCode,
+      passwordHash,
       isMobileVerified: true,
     });
 
@@ -78,18 +106,43 @@ async function signup(req, res) {
 
 async function login(req, res) {
   try {
-    const mobileNumber = normalizeMobileNumber(req.body.mobileNumber);
+    const loginId = String(req.body.loginId || req.body.email || req.body.mobileNumber || "").trim();
+    const password = String(req.body.password || "");
 
-    if (!isValidMobileNumber(mobileNumber)) {
-      return res.error("Please provide a valid mobileNumber (10 to 15 digits).", 400);
+    if (!password) {
+      return res.error("Password is required.", 400);
+    }
+
+    const normalizedEmail = normalizeEmail(loginId);
+    const normalizedMobile = normalizeMobileNumber(loginId);
+    const lookupConditions = [];
+
+    if (isValidEmail(normalizedEmail)) {
+      lookupConditions.push({ email: normalizedEmail });
+    }
+    if (isValidMobileNumber(normalizedMobile)) {
+      lookupConditions.push({ mobileNumber: normalizedMobile });
+    }
+
+    if (!lookupConditions.length) {
+      return res.error("Please enter a valid email address or mobile number.", 400);
     }
 
     const user = await User.findOne({
-      where: { mobileNumber },
+      where: { [Op.or]: lookupConditions },
     });
 
     if (!user) {
       return res.error("User not found. Please signup first.", 404);
+    }
+
+    if (!user.passwordHash) {
+      return res.error("Password is not set for this account. Please reset your password.", 400);
+    }
+
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
+      return res.error("Invalid login credentials.", 401);
     }
 
     const token = buildToken(user);
@@ -123,7 +176,11 @@ async function sendOtp(req, res) {
       },
     });
 
-    const { otp, expiresAt } = await createAndStoreOtp(user.id, mobileNumber);
+    const { otp, expiresAt } = await createAndStoreOtp({
+      userId: user.id,
+      sentToNumber: mobileNumber,
+      otpPurpose: "mobile_verification",
+    });
 
     return res.success("OTP sent successfully.", {
       mobileNumber,
@@ -154,6 +211,7 @@ async function verifyOtp(req, res) {
         userId: user.id,
         sentToNumber: mobileNumber,
         otpCode: otp,
+        otpPurpose: "mobile_verification",
         isUsed: false,
         expiresAt: { [Op.gt]: new Date() },
       },
@@ -179,9 +237,97 @@ async function verifyOtp(req, res) {
   }
 }
 
+async function requestPasswordReset(req, res) {
+  try {
+    const email = normalizeEmail(req.body.email);
+
+    if (!isValidEmail(email)) {
+      return res.error("Please provide a valid email address.", 400);
+    }
+
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.error("User not found with this email address.", 404);
+    }
+
+    const { otp, expiresAt } = await createAndStoreOtp({
+      userId: user.id,
+      sentToEmail: email,
+      otpPurpose: "password_reset",
+    });
+
+    const emailResult = await sendOtpEmail({
+      toEmail: email,
+      fullName: user.fullName,
+      otp,
+      expiresAt,
+    });
+
+    return res.success("Password reset OTP sent successfully.", {
+      email,
+      expiresAt,
+      ...(emailResult.previewMessage ? { previewMessage: emailResult.previewMessage } : {}),
+      ...(process.env.NODE_ENV !== "production" ? { otp } : {}),
+    });
+  } catch (error) {
+    return res.error("Failed to send password reset OTP.", 500, error.message);
+  }
+}
+
+async function resetPassword(req, res) {
+  try {
+    const email = normalizeEmail(req.body.email);
+    const otp = String(req.body.otp || "").trim();
+    const password = String(req.body.password || "");
+
+    if (!isValidEmail(email)) {
+      return res.error("Please provide a valid email address.", 400);
+    }
+
+    if (!/^\d{6}$/.test(otp)) {
+      return res.error("OTP must be 6 digits.", 400);
+    }
+
+    if (!isValidPassword(password)) {
+      return res.error("Password must be at least 6 characters.", 400);
+    }
+
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.error("User not found with this email address.", 404);
+    }
+
+    const otpRecord = await OtpCode.findOne({
+      where: {
+        userId: user.id,
+        sentToEmail: email,
+        otpCode: otp,
+        otpPurpose: "password_reset",
+        isUsed: false,
+        expiresAt: { [Op.gt]: new Date() },
+      },
+      order: [["createdAt", "DESC"]],
+    });
+
+    if (!otpRecord) {
+      return res.error("Invalid or expired OTP.", 401);
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    await user.update({ passwordHash });
+    await otpRecord.update({ isUsed: true });
+
+    return res.success("Password reset successful.", { email });
+  } catch (error) {
+    return res.error("Failed to reset password.", 500, error.message);
+  }
+}
+
 module.exports = {
   signup,
   login,
   sendOtp,
   verifyOtp,
+  requestPasswordReset,
+  resetPassword,
 };

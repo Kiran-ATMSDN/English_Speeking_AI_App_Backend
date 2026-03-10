@@ -30,10 +30,21 @@ class OtpCode extends Model {
           defaultValue: false,
           field: "is_used",
         },
+        otpPurpose: {
+          type: DataTypes.STRING(40),
+          allowNull: false,
+          defaultValue: "mobile_verification",
+          field: "otp_purpose",
+        },
         sentToNumber: {
           type: DataTypes.STRING(15),
-          allowNull: false,
+          allowNull: true,
           field: "sent_to_number",
+        },
+        sentToEmail: {
+          type: DataTypes.STRING(160),
+          allowNull: true,
+          field: "sent_to_email",
         },
       },
       {

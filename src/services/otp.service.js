@@ -6,13 +6,14 @@ function getOtpExpiryDate() {
   return new Date(Date.now() + minutes * 60 * 1000);
 }
 
-async function createAndStoreOtp(userId, sentToNumber) {
+async function createAndStoreOtp({ userId, sentToNumber = null, sentToEmail = null, otpPurpose = "mobile_verification" }) {
   await OtpCode.update(
     { isUsed: true },
     {
       where: {
         userId,
         isUsed: false,
+        otpPurpose,
       },
     }
   );
@@ -24,7 +25,9 @@ async function createAndStoreOtp(userId, sentToNumber) {
     userId,
     otpCode: otp,
     expiresAt,
+    otpPurpose,
     sentToNumber,
+    sentToEmail,
   });
 
   return { otp, expiresAt };

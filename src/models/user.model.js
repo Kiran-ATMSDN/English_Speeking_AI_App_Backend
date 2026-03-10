@@ -23,6 +23,11 @@ class User extends Model {
             isEmail: true,
           },
         },
+        passwordHash: {
+          type: DataTypes.STRING(255),
+          allowNull: true,
+          field: "password_hash",
+        },
         mobileNumber: {
           type: DataTypes.STRING(15),
           allowNull: false,
